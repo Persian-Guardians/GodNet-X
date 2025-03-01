@@ -34,19 +34,18 @@ else:
 # train_dataset = tf.data.Dataset.from_tensor_slices((train_images, train_labels))
 # train_dataset = train_dataset.shuffle(BUFFER_SIZE).batch(BATCH_SIZE)
 
-(train_dataset, test_dataset), info = tfds.load('cifar10', with_info=True, as_supervised=True)
+(train_dataset, test_dataset), info = tfds.load('cifar10', split=['train', 'test'], with_info=True, as_supervised=True)
 
-# پیش‌پردازش داده‌ها (در صورت نیاز)
+# حالا اینجا درست داده‌ها رو به Tensor تبدیل می‌کنیم
 def preprocess(image, label):
     image = tf.cast(image, tf.float32) / 255.0
     return image, label
 
+# BATCH_SIZE = 32
+
+# حتما از map() روی Dataset ها استفاده کن، نه روی Split
 train_dataset = train_dataset.map(preprocess).batch(BATCH_SIZE)
 test_dataset = test_dataset.map(preprocess).batch(BATCH_SIZE)
-
-# تقسیم داده‌ها بین نودها
-train_dataset = strategy.experimental_distribute_dataset(train_dataset)
-test_dataset = strategy.experimental_distribute_dataset(test_dataset)
 
 def build_model():
     model = tf.keras.Sequential([
