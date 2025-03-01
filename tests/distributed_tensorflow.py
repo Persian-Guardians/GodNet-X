@@ -1,6 +1,8 @@
 import tensorflow as tf
 import os
 
+os.environ["TF_CONFIG"] = '{"cluster": {"chief": ["192.168.31.73:12345"],"worker": ["192.168.31.100:12345"]},"task": {"type": "chief","index": 0}}'
+
 strategy = tf.distribute.MultiWorkerMirroredStrategy()
 
 BATCH_SIZE = 64
