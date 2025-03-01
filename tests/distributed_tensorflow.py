@@ -8,6 +8,11 @@ if tf.config.list_physical_devices('GPU'):
 else:
     print("GodNet-X CPU Only")
     
+os.environ["TF_DISABLE_MLIR"] = "1"  # TensorFlow legacy mode
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"  # Silence unnecessary logs
+tf.config.set_visible_devices([], 'GPU')
+print("GodNet-X Fallback to CPU Mesh")
+
 os.environ["TF_CONFIG"] = '{"cluster": {"chief": ["192.168.31.73:12345"],"worker": ["192.168.31.100:12345"]},"task": {"type": "chief","index": "0"}}'
     
 strategy = tf.distribute.MultiWorkerMirroredStrategy()
