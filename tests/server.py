@@ -1,6 +1,6 @@
 import zmq
 import tensorflow as tf
-from mesh_tensorflow import ops
+
 
 def server():
     context = zmq.Context()
