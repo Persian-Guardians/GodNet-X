@@ -1,13 +1,15 @@
 import tensorflow as tf
 import os
+import json
 
-os.environ["TF_CONFIG"] = '{"cluster": {"chief": ["192.168.31.73:12345"],"worker": ["192.168.31.100:12345"]},"task": {"type": "chief","index": 0}}'
+os.environ["TF_CONFIG"] = '{"cluster": {"chief": ["192.168.31.73:12345"],"worker": ["192.168.31.100:12345"]},"task": {"type": "chief","index": "0"}}'
 
 strategy = tf.distribute.MultiWorkerMirroredStrategy()
 
 BATCH_SIZE = 64
 BUFFER_SIZE = 10000
-NUM_WORKERS = int(os.environ.get("TF_CONFIG", "1"))
+tf_config = json.loads(os.environ["TF_CONFIG"])
+NUM_WORKERS = len(tf_config["cluster"]["worker"]) + 1  # +1 برای chief
 
 (train_images, train_labels), _ = tf.keras.datasets.cifar10.load_data()
 train_dataset = tf.data.Dataset.from_tensor_slices((train_images, train_labels))
