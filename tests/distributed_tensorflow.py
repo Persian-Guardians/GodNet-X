@@ -1,6 +1,7 @@
 import tensorflow as tf
 import os
 import json
+import tensorflow_datasets as tfds
 
 if tf.config.list_physical_devices('GPU'):
     print("GodNet-X Metal GPU Detected 🔥")
@@ -17,6 +18,8 @@ os.environ["TF_CONFIG"] = '{"cluster": {"chief": ["192.168.31.73:12345"],"worker
     
 strategy = tf.distribute.MultiWorkerMirroredStrategy()
 
+print('Number of devices: ', strategy.num_replicas_in_sync)
+
 BATCH_SIZE = 64
 BUFFER_SIZE = 10000
 tf_config = json.loads(os.environ["TF_CONFIG"])
@@ -27,9 +30,23 @@ if tf_config["task"]["type"] == "worker":
 else:
     print("GodNet-X Node Type: Chief")
 
-(train_images, train_labels), _ = tf.keras.datasets.cifar10.load_data()
-train_dataset = tf.data.Dataset.from_tensor_slices((train_images, train_labels))
-train_dataset = train_dataset.shuffle(BUFFER_SIZE).batch(BATCH_SIZE)
+# (train_images, train_labels), _ = tf.keras.datasets.cifar10.load_data()
+# train_dataset = tf.data.Dataset.from_tensor_slices((train_images, train_labels))
+# train_dataset = train_dataset.shuffle(BUFFER_SIZE).batch(BATCH_SIZE)
+
+(train_dataset, test_dataset), info = tfds.load('cifar10', with_info=True, as_supervised=True)
+
+# پیش‌پردازش داده‌ها (در صورت نیاز)
+def preprocess(image, label):
+    image = tf.cast(image, tf.float32) / 255.0
+    return image, label
+
+train_dataset = train_dataset.map(preprocess).batch(BATCH_SIZE)
+test_dataset = test_dataset.map(preprocess).batch(BATCH_SIZE)
+
+# تقسیم داده‌ها بین نودها
+train_dataset = strategy.experimental_distribute_dataset(train_dataset)
+test_dataset = strategy.experimental_distribute_dataset(test_dataset)
 
 def build_model():
     model = tf.keras.Sequential([
@@ -43,8 +60,15 @@ def build_model():
     ])
     return model
 
+def prepare_for_model(dataset):
+    return dataset.map(lambda x, y: (x, y))
+
 with strategy.scope():
     model = build_model()
     model.compile(optimizer='adam', loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True), metrics=['accuracy'])
 
-model.fit(train_dataset, epochs=10)
+    train_dataset = prepare_for_model(train_dataset)
+    test_dataset = prepare_for_model(test_dataset)
+    
+    model.fit(train_dataset, epochs=10)
+    
